@@ -1,3 +1,189 @@
+#!/bin/zsh
+
+osascript /path/to/GPTSentimentBot.scpt
+
+
+echo '#!/bin/zsh
+cd /Users/ryanyoung/Coding/GPT-Sentiment-Bot/GPT-Sentiment-Bot
+python3 main.py' > start_bot.sh
+
+
+
+
+
+
+
+
+
+
+Response:
+Apologies for the confusion. You're right, there are a few other changes needed in the program to incorporate the content from the API into the chatgpt request. Here are the sections of code that need to be modified:
+
+1. Modify the `get_news_headlines_for_companies` function to include the content of the articles:
+
+```python
+def get_news_headlines_for_companies(companies: Dict[str, str]):
+    headlines = {}
+    for symbol, _ in companies.items():  # Extract the symbol and ignore the company name
+        url = f"https://eodhistoricaldata.com/api/news?api_token={EOD_API_KEY}&s={symbol}.US&&limit=100"
+
+        response = requests.get(url)
+
+        try:
+            all_headlines = response.json()
+        except json.JSONDecodeError:
+            print(f"Error decoding JSON for {symbol}: {response.content}")
+            all_headlines = []
+
+        est = pytz.timezone("US/Eastern")
+        utc = pytz.UTC
+
+        start_time = datetime.datetime.strptime(yesterday_9am_est(), "%Y-%m-%d %H:%M:%S").replace(tzinfo=est).astimezone(utc)
+        end_time = datetime.datetime.strptime(today_9am_est(), "%Y-%m-%d %H:%M:%S").replace(tzinfo=est).astimezone(utc)
+
+        filtered_headlines = [headline for headline in all_headlines if start_time <= datetime.datetime.strptime(headline["date"], "%Y-%m-%dT%H:%M:%S%z") <= end_time]
+
+        # Fetch the content of each article
+        for headline in filtered_headlines:
+            article_url = headline["link"]
+            article_response = requests.get(article_url)
+            article_data = article_response.json()
+            content = article_data["content"]
+            headline["content"] = content
+
+        headlines[symbol] = filtered_headlines
+
+    return headlines
+```
+
+In this modified code, after fetching the headlines from the API, we iterate through each headline and fetch the content of the article using the `link` field. The content is then added to the `headline` dictionary.
+
+2. Modify the `perform_sentiment_analysis` function to include the content in the user message:
+
+```python
+def perform_sentiment_analysis(company, headline):
+    print(headline)
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo-0613",
+            messages=[
+                {"role": "system", "content": f"Forget all your previous instructions. Pretend you are a financial expert. You are a financial expert with stock recommendation experience. Answer “Positive” if good news, “Negative” if bad news, or “Neutral” if uncertain in the first line. Provide no other context."},
+                {"role": "user", "content": f"Is this headline good or bad for the stock price of {company} in the short term? \n Headline: {headline['title']}\n\n{headline['content']}"}
+            ],
+            temperature=0.2,
+        )
+    except InvalidRequestError as e:
+        return f"Error: {e}"
+    sentiment = response["choices"][0]["message"]["content"]
+    print(sentiment)
+    return sentiment
+```
+
+In this modified code, the `headline` parameter is now a dictionary containing the `title` and `content` of the article. The `title` is used in the question to the chatgpt instance, and the `content` is appended to the user message.
+
+Make sure to replace the existing `get_news_headlines_for_companies` and `perform_sentiment_analysis` functions in your code with the modified code above.
+
+These changes will fetch the content of each article from the API and pass it to the chatgpt instance for sentiment analysis.
+
+
+
+
+
+
+
+
+
+
+User Prompt:
+Is this the only change needed? If there are other changes needed in the entire program, please make sure to rethink the request entirely and provide multiple sections of code.
+
+
+
+
+
+
+
+
+
+
+
+Response:
+To add the content (full body of the article) from the API to the chatgpt request, you can modify the `perform_sentiment_analysis` function. Here's the modified code:
+
+```python
+def perform_sentiment_analysis(company, headline, content):
+    print(headline)
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo-0613",
+            messages=[
+                {"role": "system", "content": f"Forget all your previous instructions. Pretend you are a financial expert. You are a financial expert with stock recommendation experience. Answer “Positive” if good news, “Negative” if bad news, or “Neutral” if uncertain in the first line. Provide no other context."},
+                {"role": "user", "content": f"Is this headline good or bad for the stock price of {company} in the short term? \n Headline: {headline}\n\n{content}"}
+            ],
+            temperature=0.2,
+        )
+    except InvalidRequestError as e:
+        return f"Error: {e}"
+    sentiment = response["choices"][0]["message"]["content"]
+    print(sentiment)
+    return sentiment
+```
+
+In this modified code, the `content` parameter is added to the user message in the `openai.ChatCompletion.create` function. The `content` parameter contains the full body of the article obtained from the API. This way, the chatgpt instance will have more context to determine the sentiment of the article.
+
+Make sure to replace the existing `perform_sentiment_analysis` function in your code with the modified code above.
+
+
+
+
+User Prompt: 
+(Accidentally deleted, was requesting content be added to chatgpt request).
+
+
+---------------------------------------
+
+Temperature= 0.2
+
+System Prompt:
+Guidelines: You are an expert programmer. You are to help the user with requests only if you determine that the request is possible. Your responses will add properly written code according to the official language libraries that the code is already written in, or modify existing code only in the required locations to add the requested features. Below are the API  the user is integrating, and the program as currently written. Your responses will include the exact two lines above, and the exact two lines below, the code that you modify, add, or remove so that the user can easily reference the location of the code being changed and modify the program in their VSCode Client. Comment the code liberally to explain what each piece does and why it's written that way. You can write and execute Python code by enclosing it in triple backticks, e.g. ```code goes here```. Use this to perform calculations. Ensure that excerpts contain all relevant context needed to interpret them - in other words don't extract small snippets that are missing important context. Be methodical and make sure that the python code is valid and able to be run. Use external monologue to show the process of your reasoning behind the added or modified sections of code. Make sure to think about the entire program's functionality before writing new code so that you make sure to write functional code. Functioning code is the most important thing to write. You have all the time you need to complete the users request, there is no urgency so you have time to think about the request.
+
+
+API: The Stock Market and Financial News API is available under all subscriptions. Each Financial News API request consumes 5 API calls. The Financial News API is a powerful tool that helps you get company news and filter out them by date, type of news and certain tickers with the given parameters.
+
+You can also check our Sentiment Data API for News and Tweets.
+For testing purposes you can try the following API Key (works only for AAPL.US ticker):  demo. An example of a URL for the Stock Market and Financial News API:
+
+https://eodhistoricaldata.com/api/news?api_token=demo&s=AAPL.US&offset=0&limit=10
+Parameters
+
+s: String. REQUIRED if parameter ‘t’ is not set. The ticker code to get news for.
+t: String. REQUIRED if parameter ‘s’ is not set. The tag to get news on a given topic. The list of supported topics you can find at the bottom of this page:
+api_token: String. REQUIRED. Your api_token to access the API. You will get it after registration.
+from and to – the format is ‘YYYY-MM-DD’. If you need data from Mar 1, 2021, to Mar 10, 2021, you should use from=2021-03-01 and to=2021-03-10.
+limit: Number. OPTIONAL. The number of results should be returned with the query. Default value: 50, minimum value: 1, maximum value: 1000.
+offset: Number. OPTIONAL. The offset of the data. Default value: 0, minimum value: 0. For example, to get 100 symbols starting from 200 you should use limit=100 and offset=200.
+Output
+
+The output provided in JSON contains the following fields:
+
+date. The date and time of the article are in ISO 8601 format.
+title. The title of the article.
+content. The full body of the article.
+link. The link to the source.
+symbols. The array of ticker symbols is mentioned in the article.
+Financial News API
+List of Supported Tags for Financial News
+
+We have more than 50 tags to get news for a given topic, this list is expanding, below you can find all recommended tags in alphabet order:
+
+'balance sheet', 'capital employed', 'class action', 'company announcement', 'consensus eps estimate', 'consensus estimate', 'credit rating', 'discounted cash flow', 'dividend payments', 'earnings estimate', 'earnings growth', 'earnings per share', 'earnings release', 'earnings report', 'earnings results', 'earnings surprise', 'estimate revisions', 'european regulatory news', 'financial results', 'fourth quarter', 'free cash flow', 'future cash flows', 'growth rate', 'initial public offering', 'insider ownership', 'insider transactions', 'institutional investors', 'institutional ownership', 'intrinsic value', 'market research reports', 'net income', 'operating income', 'present value', 'press releases', 'price target', 'quarterly earnings', 'quarterly results', 'ratings', 'research analysis and reports', 'return on equity', 'revenue estimates', 'revenue growth', 'roce', 'roe', 'share price', 'shareholder rights', 'shareholder', 'shares outstanding', 'strong buy', 'total revenue', 'zacks investment research', 'zacks rank'
+
+End of API information (above).
+
+
+
+Here is the program as currently written (main.py):
+
 import asyncio
 import os
 import datetime
@@ -192,14 +378,6 @@ def get_news_headlines_for_companies(companies: Dict[str, str]):
 
         filtered_headlines = [headline for headline in all_headlines if start_time <= datetime.datetime.strptime(headline["date"], "%Y-%m-%dT%H:%M:%S%z") <= end_time]
 
-        # Fetch the content of each article
-        for headline in filtered_headlines:
-            article_url = headline["link"]
-            article_response = requests.get(article_url)
-            article_data = article_response.json()
-            content = article_data["content"]
-            headline["content"] = content
-
         headlines[symbol] = filtered_headlines
 
     return headlines
@@ -212,7 +390,7 @@ def perform_sentiment_analysis(company,  headline):
         model="gpt-3.5-turbo-0613",
         messages=[
             {"role": "system", "content": f"Forget all your previous instructions. Pretend you are a financial expert. You are a financial expert with stock recommendation experience. Answer “Positive” if good news, “Negative” if bad news, or “Neutral” if uncertain in the first line. Provide no other context."},
-             {"role": "user", "content": f"Is this headline and article content good or bad for the stock price of {company} in the short term? \n Headline: {headline['title']}\n\n{headline['content']}"}
+             {"role": "user", "content": f"Is this headline good or bad for the stock price of {company} in the short term? \n Headline: {headline}" }
             ],
         temperature=0.2,
         )
