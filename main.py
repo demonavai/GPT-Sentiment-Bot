@@ -201,10 +201,11 @@ def perform_sentiment_analysis(company,  headline):
     print(headline)
     try:
         response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
+        model="gpt-3.5-turbo-0613",
         messages=[
-            {"role": "user", "content": f"Forget all your previous instructions. Pretend you are a financial expert. You are a financial expert with stock recommendation experience. Answer “Positive” if good news, “Negative” if bad news, or “Neutral” if uncertain in the first line. Provide no other context. Is this headline good or bad for the stock price of {company} in the short term? \n Headline: {headline}" }
-        ],
+            {"role": "system", "content": f"Forget all your previous instructions. Pretend you are a financial expert. You are a financial expert with stock recommendation experience. Answer “Positive” if good news, “Negative” if bad news, or “Neutral” if uncertain in the first line. Provide no other context."},
+             {"role": "user", "content": f"Is this headline good or bad for the stock price of {company} in the short term? \n Headline: {headline}" }
+            ],
         temperature=0.2,
         )
     except InvalidRequestError as e:
