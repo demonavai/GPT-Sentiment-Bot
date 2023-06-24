@@ -196,9 +196,12 @@ def get_news_headlines_for_companies(companies: Dict[str, str]):
         for headline in filtered_headlines:
             article_url = headline["link"]
             article_response = requests.get(article_url)
-            article_data = article_response.json()
-            content = article_data["content"]
-            headline["content"] = content
+            try:
+                article_data = article_response.json()
+                content = article_data["content"]
+                headline["content"] = content
+            except json.JSONDecodeError:
+                print(f"Error decoding JSON for article: {article_url}")
 
         headlines[symbol] = filtered_headlines
 

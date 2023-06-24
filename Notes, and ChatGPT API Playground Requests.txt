@@ -9,6 +9,127 @@ python3 main.py' > start_bot.sh
 
 
 
+Response:
+The error message suggests that there is an issue with decoding the JSON response from the API. It seems that the response is empty or not in the expected JSON format.
+
+To fix this issue, you can add error handling to handle the case when the response is not valid JSON. Here's the modified code for the `get_news_headlines_for_companies` function:
+
+```python
+def get_news_headlines_for_companies(companies: Dict[str, str]):
+    headlines = {}
+    for symbol, _ in companies.items():  # Extract the symbol and ignore the company name
+        url = f"https://eodhistoricaldata.com/api/news?api_token={EOD_API_KEY}&s={symbol}.US&&limit=100"
+
+        response = requests.get(url)
+
+        try:
+            all_headlines = response.json()
+        except json.JSONDecodeError:
+            print(f"Error decoding JSON for {symbol}: {response.content}")
+            all_headlines = []
+
+        est = pytz.timezone("US/Eastern")
+        utc = pytz.UTC
+
+        start_time = datetime.datetime.strptime(yesterday_9am_est(), "%Y-%m-%d %H:%M:%S").replace(tzinfo=est).astimezone(utc)
+        end_time = datetime.datetime.strptime(today_9am_est(), "%Y-%m-%d %H:%M:%S").replace(tzinfo=est).astimezone(utc)
+
+        filtered_headlines = [headline for headline in all_headlines if start_time <= datetime.datetime.strptime(headline["date"], "%Y-%m-%dT%H:%M:%S%z") <= end_time]
+
+        # Fetch the content of each article
+        for headline in filtered_headlines:
+            article_url = headline["link"]
+            article_response = requests.get(article_url)
+            try:
+                article_data = article_response.json()
+                content = article_data["content"]
+                headline["content"] = content
+            except json.JSONDecodeError:
+                print(f"Error decoding JSON for article: {article_url}")
+
+        headlines[symbol] = filtered_headlines
+
+    return headlines
+```
+
+In this modified code, I've added a try-except block around the `article_response.json()` call to handle the case when the response is not valid JSON. If an error occurs, it will print an error message and continue to the next article.
+
+Make sure to replace the existing `get_news_headlines_for_companies` function in your code with the modified code above. This should handle the JSON decoding error and prevent the program from crashing.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+User Prompt:
+I got this error in my mac's terminal window upon running "/get_list_sentiments" from the telegram app. What could be going wrong? What can you fix in the code to fix the error?
+
+Error:
+Task exception was never retrieved
+future: <Task finished name='Task-19' coro=<Dispatcher._process_polling_updates() done, defined at /usr/local/lib/python3.11/site-packages/aiogram/dispatcher/dispatcher.py:407> exception=JSONDecodeError('Expecting value: line 1 column 1 (char 0)')>
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.11/site-packages/requests/models.py", line 971, in json
+    return complexjson.loads(self.text, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/Cellar/python@3.11/3.11.3/Frameworks/Python.framework/Versions/3.11/lib/python3.11/json/__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/Cellar/python@3.11/3.11.3/Frameworks/Python.framework/Versions/3.11/lib/python3.11/json/decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/Cellar/python@3.11/3.11.3/Frameworks/Python.framework/Versions/3.11/lib/python3.11/json/decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.11/site-packages/aiogram/dispatcher/dispatcher.py", line 415, in _process_polling_updates
+    for responses in itertools.chain.from_iterable(await self.process_updates(updates, fast)):
+                                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/aiogram/dispatcher/dispatcher.py", line 235, in process_updates
+    return await asyncio.gather(*tasks)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/aiogram/dispatcher/handler.py", line 117, in notify
+    response = await handler_obj.handler(*args, **partial_data)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/aiogram/dispatcher/dispatcher.py", line 256, in process_update
+    return await self.message_handlers.notify(update.message)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/aiogram/dispatcher/handler.py", line 117, in notify
+    response = await handler_obj.handler(*args, **partial_data)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ryanyoung/Coding/GPT-Sentiment-Bot/GPT-Sentiment-Bot/main.py", line 131, in get_sentiments
+    await analyze_sentiments_for_companies(COMPANIES)
+  File "/Users/ryanyoung/Coding/GPT-Sentiment-Bot/GPT-Sentiment-Bot/main.py", line 243, in analyze_sentiments_for_companies
+    headlines = get_news_headlines_for_companies(companies)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/ryanyoung/Coding/GPT-Sentiment-Bot/GPT-Sentiment-Bot/main.py", line 199, in get_news_headlines_for_companies
+    article_data = article_response.json()
+                   ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/requests/models.py", line 975, in json
+    raise RequestsJSONDecodeError(e.msg, e.doc, e.pos)
+requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+
+
+
+
+
+
+
+
 
 
 
@@ -96,6 +217,7 @@ These changes will fetch the content of each article from the API and pass it to
 
 User Prompt:
 Is this the only change needed? If there are other changes needed in the entire program, please make sure to rethink the request entirely and provide multiple sections of code.
+
 
 
 
